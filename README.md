@@ -1,115 +1,250 @@
-# Student Grade Management
+﻿# Student Grade Management
 
-ASP.NET Core MVC and Web API application for faculty grade management and student-owned grade viewing. The app uses ASP.NET Core Identity, EF Core, and Supabase PostgreSQL. Faculty and student dashboards consume the protected API with Fetch; the API calculates every remark in C#.
+This project is an ASP.NET Core MVC + Web API application for managing grades in a faculty/student workflow. The same web app hosts:
 
-## Requirements
+- MVC pages for faculty and student dashboards
+- JWT-protected API endpoints
+- ASP.NET Core Identity for authentication and role-based access
+- EF Core + PostgreSQL persistence
+
+The API calculates grade remarks on the server and enforces role-based authorization.
+
+## Prerequisites
+
+Before you begin, make sure you have:
 
 - .NET 10 SDK
-- A Supabase PostgreSQL project (or another PostgreSQL 14+ server)
-- Postman for API/security demonstrations
-- For deployment: a Render account and a Git repository containing this project
+- PostgreSQL 14+ (local PostgreSQL, Supabase, or another managed PostgreSQL instance)
+- Postman or curl for API testing
+- Optional: a GitHub repo and Render deployment account for hosting
 
-## Database and local configuration
+## Database setup
 
-Create a Supabase project and copy its PostgreSQL connection details. Use the **session pooler** or direct connection rather than the transaction pooler because the application runs EF Core migrations at startup. In the application project, use .NET user-secrets for local-only configuration:
+1. Create a PostgreSQL database.
+2. Use the database connection string from your PostgreSQL provider.
+3. For Supabase, use the direct connection or session pooler connection, not the transaction pooler; the app applies EF Core migrations at startup.
+
+Example local PostgreSQL connection string:
+
+```text
+Host=localhost;Port=5432;Database=student_grade_management;Username=postgres;Password=your_password;SSL Mode=Disable
+```
+
+Example Supabase connection string:
+
+```text
+Host=aws-0-ap-southeast-1.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.your_project_ref;Password=your_password;SSL Mode=Require;Trust Server Certificate=true
+```
+
+## Configuration
+
+Store local-only secrets with .NET user secrets so they are not committed to source control.
+
+From the project root:
 
 ```powershell
-cd StudentGradeManagement
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=YOUR_HOST;Port=5432;Database=postgres;Username=YOUR_USER;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true"
-dotnet user-secrets set "Authentication:Jwt:Key" "REPLACE_WITH_A_RANDOM_SECRET_AT_LEAST_32_BYTES_LONG"
+dotnet user-secrets init
+
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=student_grade_management;Username=postgres;Password=your_password;SSL Mode=Disable"
+dotnet user-secrets set "Authentication:Jwt:Key" "ReplaceThisWithASecretAtLeast32BytesLong"
+dotnet user-secrets set "Authentication:Jwt:Issuer" "StudentGradeManagement"
+dotnet user-secrets set "Authentication:Jwt:Audience" "StudentGradeManagement"
+
 dotnet user-secrets set "Seed:Faculty:Email" "faculty@example.test"
 dotnet user-secrets set "Seed:Faculty:Password" "A-unique-demo-password-123!"
 dotnet user-secrets set "Seed:Faculty:FacultyNumber" "FAC-001"
+
 dotnet user-secrets set "Seed:Student:Email" "student@example.test"
 dotnet user-secrets set "Seed:Student:Password" "A-different-demo-password-123!"
 dotnet user-secrets set "Seed:Student:StudentNumber" "2026-0001"
 ```
 
-Replace the example values locally; do not commit real passwords, JWT keys, or connection strings. Passwords are processed and hashed by ASP.NET Core Identity and are never stored in the academic tables. Seed credentials are for demonstrations only.
+Notes:
 
-EF Core migrations are under `StudentGradeManagement/Data/Migrations`. To apply them manually:
+- Replace the example values with your own strong secret values.
+- Do not commit real connection strings, JWT keys, or passwords.
+- The database is seeded in a secure way; user passwords are stored as ASP.NET Core Identity hashes, not in academic tables.
+- The application expects both `Seed:Faculty:*` and `Seed:Student:*` values to be configured together for each role.
+
+## Migration and seed instructions
+
+The app uses EF Core Migrations and runs them automatically on startup:
+
+```powershell
+dotnet ef database update --project .\StudentGradeManagement\StudentGradeManagement.csproj
+```
+
+If `dotnet-ef` is not installed yet:
 
 ```powershell
 dotnet tool install --global dotnet-ef --version 10.0.15
-dotnet ef database update
 ```
 
-The application also applies pending migrations at startup. Its idempotent seed routine independently fills missing sample student/faculty records and sample grades; it creates the configured demonstration accounts only when the matching seed settings are present. The database enforces grade range `0..100`, foreign keys, unique student/faculty numbers, and one grade per student/subject/semester/school year.
+The startup pipeline runs:
 
-## Run locally
+- `Database.MigrateAsync()` to apply migrations
+- `DatabaseSeeder.SeedAsync(...)` to ensure required roles exist, seed sample academic records, and create the configured demo accounts
 
-From the workspace root:
+The seed routine creates:
+
+- sample students and faculty members
+- sample grade entries
+- faculty and student demo accounts using the `Seed:*` secrets
+
+The database enforces constraints such as:
+
+- grade range 0 to 100
+- unique student and faculty numbers
+- foreign keys between grades and academic records
+- one grade per student, subject, semester, and school year
+
+## Run the API and MVC app
+
+From the repository root:
 
 ```powershell
+dotnet restore
+
+dotnet build .\StudentGradeManagement\StudentGradeManagement.csproj
+
 dotnet run --project .\StudentGradeManagement\StudentGradeManagement.csproj
 ```
 
-Open the HTTPS or HTTP URL printed by ASP.NET Core. Sign in with one of the configured demonstration accounts. Faculty accounts land on the grade-management dashboard; student accounts can open only their own grade dashboard. No public registration link is shown; accounts are provisioned by Identity seed configuration and academic-record mappings.
+The app will print a local URL such as:
 
-## API and authorization
+- `https://localhost:5001`
+- or `http://localhost:5000`
 
-Obtain a short-lived (30-minute) JWT for Postman:
+Open the printed URL in a browser.
+
+The same project serves both the MVC views and the REST API:
+
+- MVC login page: `/Identity/Account/Login`
+- Faculty dashboard: `/FacultyDashboard`
+- Student dashboard: `/StudentDashboard`
+- Health check: `/health`
+
+## Testing Faculty and Student accounts
+
+Use the configured seeded demo accounts to verify both roles.
+
+### Faculty demo account
+
+Set these values in user secrets or use your own demo values:
+
+```text
+Seed:Faculty:Email = faculty@example.test
+Seed:Faculty:Password = A-unique-demo-password-123!
+Seed:Faculty:FacultyNumber = FAC-001
+```
+
+Login at `/Identity/Account/Login` using the faculty email and password.
+
+After login, the faculty dashboard should load and allow grade-management tasks.
+
+API token test:
 
 ```http
 POST /api/auth/token
 Content-Type: application/json
 
-{"email":"faculty@example.test","password":"<configured faculty demo password>"}
+{
+  "email": "faculty@example.test",
+  "password": "A-unique-demo-password-123!"
+}
 ```
 
-Send the returned `accessToken` as `Authorization: Bearer <token>`.
+Use the returned `accessToken` in the `Authorization: Bearer <token>` header for protected API requests.
+
+### Student demo account
+
+Set these values in user secrets or use your own demo values:
+
+```text
+Seed:Student:Email = student@example.test
+Seed:Student:Password = A-different-demo-password-123!
+Seed:Student:StudentNumber = 2026-0001
+```
+
+Login at `/Identity/Account/Login` using the student email and password.
+
+After login, the student dashboard should load and display only the signed-in student’s grades.
+
+The student is forbidden from accessing faculty endpoints and cannot modify grades through the student API.
+
+### Postman verification
+
+Import the collection file in `postman/StudentGradeManagement.postman_collection.json`.
+
+Set the collection variables:
+
+- `baseUrl`
+- `facultyEmail`
+- `facultyPassword`
+- `studentEmail`
+- `studentPassword`
+- `expectedStudentNumber`
+
+Run the requests to confirm:
+
+- faculty can list/create/update/delete grades
+- invalid grade values like `105`, `-1`, and `84.5` are rejected with `400`
+- student can access only their own grade data
+- student attempts to call faculty endpoints return `403`
+- unauthenticated access to faculty API endpoints returns `401`
+
+## API authorization summary
+
+The app exposes the following main endpoints:
 
 | Method | Endpoint | Access |
 |---|---|---|
-| POST | `/api/auth/token` | Public credential exchange |
+| POST | `/api/auth/token` | Public login exchange |
 | GET | `/api/grades` | Faculty |
 | GET | `/api/grades/students` | Faculty |
 | GET | `/api/grades/{id}` | Faculty |
 | POST | `/api/grades` | Faculty |
 | PUT | `/api/grades/{id}` | Faculty |
 | DELETE | `/api/grades/{id}` | Faculty |
-| GET | `/api/student/grades` | Student, filtered by the signed-in account mapping |
+| GET | `/api/student/grades` | Student |
 
-Grade writes accept `studentId`, `subjectCode`, `subjectName`, whole-number `grade`, `semester`, and `schoolYear`. `facultyId` and `remarks` are not accepted as authoritative inputs: the API obtains the faculty mapping from the authenticated account and calculates remarks itself. Grades must be integers from 0 to 100. Duplicate final grades return `409 Conflict`. Student API access has no caller-selectable student ID; an extra query string does not change the account-derived filter.
+The API validates JWTs, role membership, and mapped academic records. Student requests are filtered by the signed-in account, and a caller cannot override the student context by passing another `studentId` in the query string.
 
-The MVC dashboards use the signed-in Identity session and a short-lived API token to call the same API. The student page contains no grade write controls. The API independently enforces JWT authentication, roles, active academic mappings, and student ownership.
+## Testing
 
-## Postman verification
-
-Import `postman/StudentGradeManagement.postman_collection.json`. Set the collection variables `baseUrl`, `facultyEmail`, `facultyPassword`, `studentEmail`, `studentPassword`, and `expectedStudentNumber`; use the demo values configured above. Run the collection requests to capture:
-
-- faculty list/create/update/delete, including a false client `remarks` value and the returned computed remark;
-- grades `105`, `-1`, and `84.5`, which should return `400`;
-- the student's own grades and a request with an attempted `studentId` query-string override;
-- student `GET` of faculty data and `POST`/`PUT`/`DELETE` attempts, which should return `403`;
-- an unauthenticated faculty endpoint, which should return `401`.
-
-The collection has response assertions and stores issued tokens and created record identifiers in collection variables. For the examination submission, run it against the deployed URL, retain the Postman request/response evidence (screenshots or exported run), and be sure to show both successful and rejected cases. This repository does not contain fabricated screenshots or live credentials.
-
-## Tests
+Run the automated tests:
 
 ```powershell
 dotnet test .\StudentGradeManagement.Tests\StudentGradeManagement.Tests.csproj
+```
+
+Run a build to confirm the app compiles:
+
+```powershell
 dotnet build .\StudentGradeManagement\StudentGradeManagement.csproj
 ```
 
-The unit tests cover every remark boundary, out-of-range values, missing grades, and fractional JSON grades.
+The test project covers grade boundaries, invalid values, missing grade cases, and fractional JSON grade validation.
 
-## Deploy to Render + Supabase
+## Deployment notes
 
-1. Push the repository to GitHub and create a Supabase PostgreSQL project. Copy the session-pooler/direct database connection string and keep its password private.
-2. In Render, create a Blueprint from the repository using `render.yaml`. The Blueprint requests the database connection string and demo account credentials; set these as Render environment secrets. It generates a JWT signing secret.
-3. Use a strong, unique faculty and student demo password that satisfies Identity's password policy. The sample academic rows include `FAC-001` and `2026-0001`.
-4. Deploy the Docker web service. On startup it applies EF migrations, inserts missing sample academic data, provisions the configured Identity roles/accounts, and maps those accounts to the selected academic records.
-5. Confirm the deployment's `/health` endpoint responds with `200`, sign in to both dashboards, then run the Postman collection against the Render URL.
+For Render + Supabase:
 
-The Render service is configured to bind to Render's `PORT`. Do not add credentials to `render.yaml`, `appsettings.json`, or source control. Use one application instance during initial migration/deployment; review migration strategy before scaling out multiple instances.
+1. Push the code to GitHub.
+2. Create a Supabase PostgreSQL project.
+3. Copy the direct or session pooler connection string and store it as a secure environment variable.
+4. In Render, configure the app using `render.yaml` and set the required environment variables for database connection and demo account credentials.
+5. Confirm the app is running and the `/health` endpoint returns `200`.
+
+Do not commit production secrets to source control. Use a single app instance during initial deployment and review your migration strategy before scaling horizontally.
 
 ## Solution layout
 
-- `StudentGradeManagement/Controllers/Api`: authentication and REST endpoints.
-- `StudentGradeManagement/Controllers`: authenticated MVC dashboards.
-- `StudentGradeManagement/Data`: PostgreSQL EF Core context and migrations.
-- `StudentGradeManagement/Models`: Identity mappings, academic entities, DTOs, and server-side remark calculation.
-- `StudentGradeManagement/wwwroot/js`: Fetch-based dashboard behavior.
-- `StudentGradeManagement.Tests`: automated validation and grade-scale tests.
+- `StudentGradeManagement/Controllers`: MVC controllers and dashboard pages
+- `StudentGradeManagement/Controllers/Api`: API controllers and auth endpoints
+- `StudentGradeManagement/Data`: EF Core DbContext and migrations
+- `StudentGradeManagement/Models`: domain models, DTOs, and grade remark logic
+- `StudentGradeManagement/Services`: database seeding and token generation
+- `StudentGradeManagement/wwwroot/js`: Fetch-based client behavior
+- `StudentGradeManagement.Tests`: validation and grading tests
+- `postman/StudentGradeManagement.postman_collection.json`: API verification collection
