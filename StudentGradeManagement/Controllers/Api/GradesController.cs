@@ -44,6 +44,18 @@ public sealed class GradesController(
         return Ok(students);
     }
 
+    [HttpGet("subjects")]
+    [ProducesResponseType<IReadOnlyList<string>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<string>>> GetSubjectCodes()
+    {
+        var subjectCodes = await db.StudentGrades.AsNoTracking()
+            .Select(grade => grade.SubjectCode)
+            .Distinct()
+            .OrderBy(subjectCode => subjectCode)
+            .ToListAsync();
+        return Ok(subjectCodes);
+    }
+
     [HttpGet("{id:int}")]
     [ProducesResponseType<GradeResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

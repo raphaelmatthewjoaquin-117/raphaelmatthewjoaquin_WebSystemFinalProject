@@ -83,8 +83,9 @@
 
     async function load() {
         try {
-            const [studentOptions, records] = await Promise.all([
+            const [studentOptions, subjectCodes, records] = await Promise.all([
                 request("/api/grades/students"),
+                request("/api/grades/subjects"),
                 request("/api/grades")
             ]);
             studentSelect.replaceChildren();
@@ -93,6 +94,11 @@
                 option.value = student.studentId;
                 option.textContent = `${student.studentNumber} · ${student.studentName}`;
                 studentSelect.appendChild(option);
+            }
+            const subjectCodeSelect = input("subject-code");
+            subjectCodeSelect.replaceChildren(new Option("Select a subject code", ""));
+            for (const subjectCode of subjectCodes) {
+                subjectCodeSelect.add(new Option(subjectCode, subjectCode));
             }
             grades = records;
             renderGrades();
