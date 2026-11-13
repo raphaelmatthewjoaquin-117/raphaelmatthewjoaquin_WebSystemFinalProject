@@ -45,15 +45,20 @@ public sealed class GradesController(
     }
 
     [HttpGet("subjects")]
-    [ProducesResponseType<IReadOnlyList<string>>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<string>>> GetSubjectCodes()
+    [ProducesResponseType<IReadOnlyList<SubjectOption>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<SubjectOption>>> GetSubjects()
     {
-        var subjectCodes = await db.StudentGrades.AsNoTracking()
-            .Select(grade => grade.SubjectCode)
-            .Distinct()
-            .OrderBy(subjectCode => subjectCode)
+        var subjects = await db.StudentGrades.AsNoTracking()
+            .GroupBy(grade => grade.SubjectCode)
+            .Select(subjectGrades => new SubjectOption(
+                subjectGrades.Key,
+                subjectGrades
+                    .OrderByDescending(grade => grade.DateModified ?? grade.DatePosted)
+                    .Select(grade => grade.SubjectName)
+                    .First()))
+            .OrderBy(subject => subject.SubjectCode)
             .ToListAsync();
-        return Ok(subjectCodes);
+        return Ok(subjects);
     }
 
     [HttpGet("{id:int}")]

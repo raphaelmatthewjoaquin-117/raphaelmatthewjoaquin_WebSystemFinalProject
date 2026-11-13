@@ -35,6 +35,8 @@ public sealed class CreateGradeRequest : IValidatableObject
 
 public sealed record StudentOption(int StudentId, string StudentNumber, string StudentName);
 
+public sealed record SubjectOption(string SubjectCode, string SubjectName);
+
 public sealed record GradeResponse(
     int GradeId,
     int StudentId,

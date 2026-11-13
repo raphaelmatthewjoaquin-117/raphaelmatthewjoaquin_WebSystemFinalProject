@@ -9,6 +9,7 @@
     const cancelEdit = document.getElementById("cancel-edit");
     const input = id => document.getElementById(id);
     let grades = [];
+    let subjectNames = new Map();
 
     function showMessage(text, kind = "info") {
         message.textContent = text;
@@ -47,6 +48,16 @@
         row.appendChild(element);
     }
 
+    function populateDatalist(id, values) {
+        const datalist = input(id);
+        datalist.replaceChildren();
+        for (const value of [...new Set(values)].sort()) {
+            const option = document.createElement("option");
+            option.value = value;
+            datalist.appendChild(option);
+        }
+    }
+
     function renderGrades() {
         tableBody.replaceChildren();
         if (grades.length === 0) {
@@ -83,7 +94,7 @@
 
     async function load() {
         try {
-            const [studentOptions, subjectCodes, records] = await Promise.all([
+            const [studentOptions, subjects, records] = await Promise.all([
                 request("/api/grades/students"),
                 request("/api/grades/subjects"),
                 request("/api/grades")
@@ -97,15 +108,25 @@
             }
             const subjectCodeSelect = input("subject-code");
             subjectCodeSelect.replaceChildren(new Option("Select a subject code", ""));
-            for (const subjectCode of subjectCodes) {
-                subjectCodeSelect.add(new Option(subjectCode, subjectCode));
+            subjectNames = new Map();
+            for (const subject of subjects) {
+                subjectNames.set(subject.subjectCode, subject.subjectName);
+                subjectCodeSelect.add(new Option(
+                    `${subject.subjectCode} · ${subject.subjectName}`,
+                    subject.subjectCode));
             }
             grades = records;
+            populateDatalist("semester-options", records.map(grade => grade.semester));
+            populateDatalist("school-year-options", records.map(grade => grade.schoolYear));
             renderGrades();
         } catch (error) {
             showMessage(error.message || "Grade records could not be loaded.", "danger");
         }
     }
+
+    input("subject-code").addEventListener("change", () => {
+        input("subject-name").value = subjectNames.get(input("subject-code").value) || "";
+    });
 
     function beginEdit(grade) {
         editId.value = grade.gradeId;

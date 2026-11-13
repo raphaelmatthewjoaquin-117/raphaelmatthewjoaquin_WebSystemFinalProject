@@ -60,11 +60,13 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label" for="semester">Semester</label>
-                <input class="form-control" id="semester" maxlength="50" required />
+                <input class="form-control" id="semester" list="semester-options" maxlength="50" required />
+                <datalist id="semester-options"></datalist>
             </div>
             <div class="col-md-3">
                 <label class="form-label" for="school-year">School year</label>
-                <input class="form-control" id="school-year" maxlength="20" required />
+                <input class="form-control" id="school-year" list="school-year-options" maxlength="20" required />
+                <datalist id="school-year-options"></datalist>
             </div>
             <div class="col-12 d-flex gap-2">
                 <button class="btn btn-primary" type="submit">Save grade</button>
