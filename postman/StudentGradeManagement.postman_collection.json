@@ -73,6 +73,16 @@
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Faculty can list active students', () => pm.response.to.have.status(200));", "if (pm.response.code === 200 && pm.response.json().length) {", "  const students = pm.response.json();", "  pm.collectionVariables.set('studentId', students[0].studentId);", "  pm.collectionVariables.set('otherStudentId', students.length > 1 ? students[1].studentId : 999999);", "}"] } }]
         },
         {
+          "name": "Create test subject before grade CRUD",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{facultyToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"subjectCode\":\"POSTMAN-TEST\",\"subjectName\":\"API Test Record\"}" },
+            "url": "{{baseUrl}}/api/grades/subjects"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Test subject is available for grade CRUD', () => pm.expect([201, 409]).to.include(pm.response.code));"] } }]
+        },
+        {
           "name": "Create grade with a false client remark",
           "request": {
             "method": "POST",

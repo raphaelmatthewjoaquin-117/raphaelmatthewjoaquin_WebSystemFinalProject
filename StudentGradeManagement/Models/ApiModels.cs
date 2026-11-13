@@ -33,6 +33,15 @@ public sealed class CreateGradeRequest : IValidatableObject
     }
 }
 
+public sealed class CreateSubjectRequest
+{
+    [Required, StringLength(30, MinimumLength = 1)]
+    public string? SubjectCode { get; init; }
+
+    [Required, StringLength(200, MinimumLength = 1)]
+    public string? SubjectName { get; init; }
+}
+
 public sealed record StudentOption(int StudentId, string StudentNumber, string StudentName);
 
 public sealed record SubjectOption(string SubjectCode, string SubjectName);

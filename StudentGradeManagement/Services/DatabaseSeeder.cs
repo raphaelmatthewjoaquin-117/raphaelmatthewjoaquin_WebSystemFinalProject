@@ -72,6 +72,22 @@ public static class DatabaseSeeder
             ("2026-0003", "NET101", "Networking Fundamentals", 68)
         };
 
+        foreach (var (subjectCode, subjectName) in sampleGrades
+                     .Select(grade => (grade.Item2, grade.Item3))
+                     .Distinct())
+        {
+            if (!await db.Subjects.AnyAsync(subject => subject.SubjectCode == subjectCode))
+            {
+                db.Subjects.Add(new Subject
+                {
+                    SubjectCode = subjectCode,
+                    SubjectName = subjectName
+                });
+            }
+        }
+
+        await db.SaveChangesAsync();
+
         foreach (var (studentNumber, subjectCode, subjectName, gradeValue) in sampleGrades)
         {
             var student = await db.Students.SingleAsync(item => item.StudentNumber == studentNumber);

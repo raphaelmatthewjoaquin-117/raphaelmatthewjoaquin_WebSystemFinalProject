@@ -384,6 +384,22 @@ namespace StudentGradeManagement.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StudentGradeManagement.Models.Subject", b =>
+                {
+                    b.Property<string>("SubjectCode")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("SubjectName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("SubjectCode");
+
+                    b.ToTable("Subjects");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)

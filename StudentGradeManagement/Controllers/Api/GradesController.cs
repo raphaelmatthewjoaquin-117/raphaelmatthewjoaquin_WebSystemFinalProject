@@ -48,17 +48,48 @@ public sealed class GradesController(
     [ProducesResponseType<IReadOnlyList<SubjectOption>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<SubjectOption>>> GetSubjects()
     {
-        var subjects = await db.StudentGrades.AsNoTracking()
-            .GroupBy(grade => grade.SubjectCode)
-            .Select(subjectGrades => new SubjectOption(
-                subjectGrades.Key,
-                subjectGrades
-                    .OrderByDescending(grade => grade.DateModified ?? grade.DatePosted)
-                    .Select(grade => grade.SubjectName)
-                    .First()))
+        var subjects = await db.Subjects.AsNoTracking()
             .OrderBy(subject => subject.SubjectCode)
+            .Select(subject => new SubjectOption(subject.SubjectCode, subject.SubjectName))
             .ToListAsync();
         return Ok(subjects);
+    }
+
+    [HttpPost("subjects")]
+    [ProducesResponseType<SubjectOption>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<SubjectOption>> CreateSubject(CreateSubjectRequest request)
+    {
+        var subjectCode = request.SubjectCode!.Trim();
+        var subjectName = request.SubjectName!.Trim();
+        if (subjectCode.Length == 0 || subjectName.Length == 0)
+        {
+            ModelState.AddModelError(
+                subjectCode.Length == 0 ? nameof(request.SubjectCode) : nameof(request.SubjectName),
+                "Subject code and subject name are required.");
+            return ValidationProblem(ModelState);
+        }
+
+        var subject = new Subject
+        {
+            SubjectCode = subjectCode,
+            SubjectName = subjectName
+        };
+        db.Subjects.Add(subject);
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+        {
+            return Conflict(new ProblemDetails
+            {
+                Title = "A subject with this code already exists."
+            });
+        }
+
+        var result = new SubjectOption(subject.SubjectCode, subject.SubjectName);
+        return CreatedAtAction(nameof(GetSubjects), null, result);
     }
 
     [HttpGet("{id:int}")]
@@ -94,11 +125,19 @@ public sealed class GradesController(
             return ValidationProblem(ModelState);
         }
 
+        var subject = await db.Subjects.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.SubjectCode == request.SubjectCode!.Trim());
+        if (subject is null)
+        {
+            ModelState.AddModelError(nameof(request.SubjectCode), "Select a registered subject.");
+            return ValidationProblem(ModelState);
+        }
+
         var grade = new StudentGrade
         {
             StudentId = request.StudentId!.Value,
-            SubjectCode = request.SubjectCode!.Trim(),
-            SubjectName = request.SubjectName!.Trim(),
+            SubjectCode = subject.SubjectCode,
+            SubjectName = subject.SubjectName,
             FacultyId = facultyId,
             Grade = decimal.ToInt32(request.Grade!.Value),
             Remarks = GradeRemarks.For(decimal.ToInt32(request.Grade.Value)),
@@ -154,9 +193,17 @@ public sealed class GradesController(
             return ValidationProblem(ModelState);
         }
 
+        var subject = await db.Subjects.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.SubjectCode == request.SubjectCode!.Trim());
+        if (subject is null)
+        {
+            ModelState.AddModelError(nameof(request.SubjectCode), "Select a registered subject.");
+            return ValidationProblem(ModelState);
+        }
+
         grade.StudentId = request.StudentId!.Value;
-        grade.SubjectCode = request.SubjectCode!.Trim();
-        grade.SubjectName = request.SubjectName!.Trim();
+        grade.SubjectCode = subject.SubjectCode;
+        grade.SubjectName = subject.SubjectName;
         grade.FacultyId = facultyId;
         grade.Grade = decimal.ToInt32(request.Grade!.Value);
         grade.Remarks = GradeRemarks.For(decimal.ToInt32(request.Grade.Value));

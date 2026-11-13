@@ -4,6 +4,7 @@
     const tableBody = document.querySelector("#grade-table tbody");
     const studentSelect = document.getElementById("student-id");
     const form = document.getElementById("grade-form");
+    const subjectForm = document.getElementById("subject-form");
     const editId = document.getElementById("grade-id");
     const formTitle = document.getElementById("grade-form-title");
     const cancelEdit = document.getElementById("cancel-edit");
@@ -58,6 +59,18 @@
         }
     }
 
+    function renderSubjects(subjects) {
+        const subjectCodeSelect = input("subject-code");
+        subjectCodeSelect.replaceChildren(new Option("Select a subject code", ""));
+        subjectNames = new Map();
+        for (const subject of subjects) {
+            subjectNames.set(subject.subjectCode, subject.subjectName);
+            subjectCodeSelect.add(new Option(
+                `${subject.subjectCode} · ${subject.subjectName}`,
+                subject.subjectCode));
+        }
+    }
+
     function renderGrades() {
         tableBody.replaceChildren();
         if (grades.length === 0) {
@@ -106,15 +119,7 @@
                 option.textContent = `${student.studentNumber} · ${student.studentName}`;
                 studentSelect.appendChild(option);
             }
-            const subjectCodeSelect = input("subject-code");
-            subjectCodeSelect.replaceChildren(new Option("Select a subject code", ""));
-            subjectNames = new Map();
-            for (const subject of subjects) {
-                subjectNames.set(subject.subjectCode, subject.subjectName);
-                subjectCodeSelect.add(new Option(
-                    `${subject.subjectCode} · ${subject.subjectName}`,
-                    subject.subjectCode));
-            }
+            renderSubjects(subjects);
             grades = records;
             populateDatalist("semester-options", records.map(grade => grade.semester));
             populateDatalist("school-year-options", records.map(grade => grade.schoolYear));
@@ -186,5 +191,28 @@
     });
 
     cancelEdit.addEventListener("click", resetForm);
+
+    subjectForm.addEventListener("submit", async event => {
+        event.preventDefault();
+        const payload = {
+            subjectCode: input("new-subject-code").value.trim(),
+            subjectName: input("new-subject-name").value.trim()
+        };
+        try {
+            const subject = await request("/api/grades/subjects", {
+                method: "POST",
+                body: JSON.stringify(payload)
+            });
+            const subjects = await request("/api/grades/subjects");
+            renderSubjects(subjects);
+            input("subject-code").value = subject.subjectCode;
+            input("subject-name").value = subject.subjectName;
+            subjectForm.reset();
+            showMessage(`Subject ${subject.subjectCode} added.`, "success");
+        } catch (error) {
+            showMessage(error.message || "Subject could not be added.", "danger");
+        }
+    });
+
     load();
 })();

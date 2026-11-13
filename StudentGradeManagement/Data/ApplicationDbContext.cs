@@ -9,6 +9,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
     public DbSet<Student> Students => Set<Student>();
     public DbSet<Faculty> Faculty => Set<Faculty>();
+    public DbSet<Subject> Subjects => Set<Subject>();
     public DbSet<StudentGrade> StudentGrades => Set<StudentGrade>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -33,6 +34,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(faculty => faculty.FirstName).HasMaxLength(100).IsRequired();
             entity.Property(faculty => faculty.LastName).HasMaxLength(100).IsRequired();
             entity.Property(faculty => faculty.Email).HasMaxLength(256).IsRequired();
+        });
+
+        builder.Entity<Subject>(entity =>
+        {
+            entity.HasKey(subject => subject.SubjectCode);
+            entity.Property(subject => subject.SubjectCode).HasMaxLength(30).IsRequired();
+            entity.Property(subject => subject.SubjectName).HasMaxLength(200).IsRequired();
         });
 
         builder.Entity<StudentGrade>(entity =>
