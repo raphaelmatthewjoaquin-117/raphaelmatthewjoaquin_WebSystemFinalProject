@@ -1,0 +1,77 @@
+@model FacultyDashboardViewModel
+@{
+    ViewData["Title"] = "Faculty dashboard";
+}
+
+<meta name="api-token" content="@Model.ApiToken" />
+<div class="dashboard-heading">
+    <div>
+        <p class="eyebrow">Faculty workspace · @Model.FacultyNumber</p>
+        <h1>Welcome, @Model.FacultyName</h1>
+        <p class="text-muted">Post and manage student final grades.</p>
+    </div>
+</div>
+
+<div id="faculty-message" class="alert d-none" role="status" aria-live="polite"></div>
+<section class="card dashboard-card mb-4">
+    <div class="card-body">
+        <h2 class="h4">Grade records</h2>
+        <div class="table-responsive">
+            <table class="table align-middle" id="grade-table">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Subject</th>
+                        <th>Grade</th>
+                        <th>Remarks</th>
+                        <th>Semester</th>
+                        <th>School year</th>
+                        <th><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<section class="card dashboard-card">
+    <div class="card-body">
+        <h2 class="h4" id="grade-form-title">Add a grade</h2>
+        <form id="grade-form" class="row g-3">
+            <input id="grade-id" type="hidden" />
+            <div class="col-md-6">
+                <label class="form-label" for="student-id">Student</label>
+                <select class="form-select" id="student-id" required></select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="subject-code">Subject code</label>
+                <input class="form-control" id="subject-code" maxlength="30" required />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="subject-name">Subject name</label>
+                <input class="form-control" id="subject-name" maxlength="200" required />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="grade-value">Grade (0-100)</label>
+                <input class="form-control" id="grade-value" type="number" min="0" max="100" step="1" required />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="semester">Semester</label>
+                <input class="form-control" id="semester" maxlength="50" required />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="school-year">School year</label>
+                <input class="form-control" id="school-year" maxlength="20" required />
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button class="btn btn-primary" type="submit">Save grade</button>
+                <button class="btn btn-outline-secondary d-none" id="cancel-edit" type="button">Cancel edit</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/js/faculty-dashboard.js" asp-append-version="true"></script>
+}

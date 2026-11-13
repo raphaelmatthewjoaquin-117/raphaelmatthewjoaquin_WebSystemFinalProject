@@ -1,0 +1,163 @@
+(() => {
+    const token = document.querySelector('meta[name="api-token"]')?.content;
+    const message = document.getElementById("faculty-message");
+    const tableBody = document.querySelector("#grade-table tbody");
+    const studentSelect = document.getElementById("student-id");
+    const form = document.getElementById("grade-form");
+    const editId = document.getElementById("grade-id");
+    const formTitle = document.getElementById("grade-form-title");
+    const cancelEdit = document.getElementById("cancel-edit");
+    const input = id => document.getElementById(id);
+    let grades = [];
+
+    function showMessage(text, kind = "info") {
+        message.textContent = text;
+        message.className = `alert alert-${kind}`;
+    }
+
+    async function request(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                Accept: "application/json",
+                Authorization: `Bearer ${token}`,
+                ...(options.body ? { "Content-Type": "application/json" } : {}),
+                ...options.headers
+            }
+        });
+        if (!response.ok) {
+            let detail = `Request failed (${response.status}).`;
+            try {
+                const problem = await response.json();
+                detail = problem.detail || problem.title || detail;
+                if (problem.errors) {
+                    detail = Object.values(problem.errors).flat().join(" ");
+                }
+            } catch {
+                // Keep the useful status message when the server does not return JSON.
+            }
+            throw new Error(detail);
+        }
+        return response.status === 204 ? null : response.json();
+    }
+
+    function cell(row, text) {
+        const element = document.createElement("td");
+        element.textContent = text;
+        row.appendChild(element);
+    }
+
+    function renderGrades() {
+        tableBody.replaceChildren();
+        if (grades.length === 0) {
+            showMessage("No grade records yet. Use the form below to add one.", "info");
+            return;
+        }
+        message.classList.add("d-none");
+        for (const grade of grades) {
+            const row = document.createElement("tr");
+            cell(row, `${grade.studentNumber} · ${grade.studentName}`);
+            cell(row, `${grade.subjectCode} · ${grade.subjectName}`);
+            cell(row, String(grade.grade));
+            cell(row, grade.remarks);
+            cell(row, grade.semester);
+            cell(row, grade.schoolYear);
+
+            const actions = document.createElement("td");
+            actions.className = "text-nowrap";
+            const edit = document.createElement("button");
+            edit.className = "btn btn-sm btn-outline-primary me-2";
+            edit.type = "button";
+            edit.textContent = "Edit";
+            edit.addEventListener("click", () => beginEdit(grade));
+            const remove = document.createElement("button");
+            remove.className = "btn btn-sm btn-outline-danger";
+            remove.type = "button";
+            remove.textContent = "Delete";
+            remove.addEventListener("click", () => deleteGrade(grade));
+            actions.append(edit, remove);
+            row.appendChild(actions);
+            tableBody.appendChild(row);
+        }
+    }
+
+    async function load() {
+        try {
+            const [studentOptions, records] = await Promise.all([
+                request("/api/grades/students"),
+                request("/api/grades")
+            ]);
+            studentSelect.replaceChildren();
+            for (const student of studentOptions) {
+                const option = document.createElement("option");
+                option.value = student.studentId;
+                option.textContent = `${student.studentNumber} · ${student.studentName}`;
+                studentSelect.appendChild(option);
+            }
+            grades = records;
+            renderGrades();
+        } catch (error) {
+            showMessage(error.message || "Grade records could not be loaded.", "danger");
+        }
+    }
+
+    function beginEdit(grade) {
+        editId.value = grade.gradeId;
+        studentSelect.value = grade.studentId;
+        input("subject-code").value = grade.subjectCode;
+        input("subject-name").value = grade.subjectName;
+        input("grade-value").value = grade.grade;
+        input("semester").value = grade.semester;
+        input("school-year").value = grade.schoolYear;
+        formTitle.textContent = "Edit grade";
+        cancelEdit.classList.remove("d-none");
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function resetForm() {
+        form.reset();
+        editId.value = "";
+        formTitle.textContent = "Add a grade";
+        cancelEdit.classList.add("d-none");
+    }
+
+    async function deleteGrade(grade) {
+        if (!window.confirm(`Delete ${grade.subjectCode} for ${grade.studentName}? This cannot be undone.`)) {
+            return;
+        }
+        try {
+            await request(`/api/grades/${grade.gradeId}`, { method: "DELETE" });
+            showMessage("Grade deleted.", "success");
+            await load();
+        } catch (error) {
+            showMessage(error.message, "danger");
+        }
+    }
+
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+        const gradeId = editId.value;
+        const payload = {
+            studentId: Number(studentSelect.value),
+            subjectCode: input("subject-code").value.trim(),
+            subjectName: input("subject-name").value.trim(),
+            grade: Number(input("grade-value").value),
+            semester: input("semester").value.trim(),
+            schoolYear: input("school-year").value.trim(),
+            remarks: "Client value is ignored; the API computes this."
+        };
+        try {
+            const saved = await request(
+                gradeId ? `/api/grades/${gradeId}` : "/api/grades",
+                { method: gradeId ? "PUT" : "POST", body: JSON.stringify(payload) });
+            showMessage(`Grade saved. Server-calculated remark: ${saved.remarks}.`, "success");
+            resetForm();
+            await load();
+        } catch (error) {
+            showMessage(error.message, "danger");
+        }
+    });
+
+    cancelEdit.addEventListener("click", resetForm);
+    load();
+})();

@@ -1,0 +1,17 @@
+@{
+    ViewData["Title"] = "Student Grade Management";
+}
+
+<section class="hero-panel">
+    <p class="eyebrow">Academic records</p>
+    <h1>Student Grade Management</h1>
+    <p class="lead">Secure grade access for students and faculty.</p>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <p>Use the dashboard link in the navigation bar to continue.</p>
+    }
+    else
+    {
+        <a class="btn btn-primary btn-lg" asp-area="Identity" asp-page="/Account/Login">Sign in</a>
+    }
+</section>

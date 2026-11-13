@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: student-grade-management
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: Authentication__Jwt__Key
+        generateValue: true
+      - key: Seed__Faculty__Email
+        sync: false
+      - key: Seed__Faculty__Password
+        sync: false
+      - key: Seed__Faculty__FacultyNumber
+        value: FAC-001
+      - key: Seed__Student__Email
+        sync: false
+      - key: Seed__Student__Password
+        sync: false
+      - key: Seed__Student__StudentNumber
+        value: 2026-0001

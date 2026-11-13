@@ -1,0 +1,32 @@
+@model StudentDashboardViewModel
+@{
+    ViewData["Title"] = "My grades";
+}
+
+<meta name="api-token" content="@Model.ApiToken" />
+<div class="dashboard-heading">
+    <div>
+        <p class="eyebrow">Student portal · @Model.StudentNumber</p>
+        <h1>Welcome, @Model.StudentName</h1>
+        <p class="text-muted">Your grades are private and visible only to your account.</p>
+    </div>
+</div>
+
+<div id="student-message" class="alert d-none" role="status" aria-live="polite"></div>
+<section class="card dashboard-card">
+    <div class="card-body">
+        <h2 class="h4">My grades</h2>
+        <div class="table-responsive">
+            <table class="table align-middle" id="student-grade-table">
+                <thead>
+                    <tr><th>Subject</th><th>Grade</th><th>Remarks</th><th>Semester</th><th>School year</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/js/student-grades.js" asp-append-version="true"></script>
+}
